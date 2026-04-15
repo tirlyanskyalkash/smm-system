@@ -1,0 +1,145 @@
+/* Улучшенный дизайн для формы создания поста */
+
+/* Выравнивание элементов формы */
+.fi-fo-2xl\:gap-6 {
+    gap: 1.5rem;
+}
+
+/* Стили для карточек */
+.fi-fo-card {
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    transition: all 0.2s ease;
+}
+
+.fi-fo-card:hover {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+/* Стили для полей ввода */
+.fi-input {
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.fi-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Стили для кнопок */
+.fi-btn {
+    border-radius: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.fi-btn-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border: none;
+}
+
+.fi-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px -10px #6366f1;
+}
+
+/* Стили для чекбокса */
+.fi-checkbox-input {
+    border-radius: 0.5rem;
+    border-width: 2px;
+}
+
+/* Стили для RichEditor */
+.tox-tinymce {
+    border-radius: 0.75rem !important;
+    border-color: #e2e8f0 !important;
+}
+
+.tox-editor-header {
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+/* Стили для выбора платформы */
+.fi-select-input {
+    border-radius: 0.75rem;
+    background-color: #f8fafc;
+}
+
+/* Стили для карточки статистики */
+.fi-wi-stats-overview .fi-stat {
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.fi-wi-stats-overview .fi-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -12px rgb(0 0 0 / 0.15);
+}
+
+/* Стили для таблицы */
+.fi-ta-content {
+    border-radius: 1rem;
+}
+
+.fi-ta-header {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+/* Анимация для загрузки */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.fi-loading {
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Стили для дашборда */
+.dashboard-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 1rem;
+    border: 1px solid #e2e8f0;
+    padding: 1.5rem;
+    transition: all 0.2s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -12px rgb(0 0 0 / 0.1);
+}
+
+/* Стили для Badge статусов */
+.fi-badge {
+    border-radius: 9999px;
+    padding: 0.25rem 0.75rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+/* Стили для успешных уведомлений */
+.fi-notification-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-radius: 0.75rem;
+}
+
+/* Стили для ошибок */
+.fi-notification-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-radius: 0.75rem;
+}
+
+/* Адаптив для мобильных устройств */
+@media (max-width: 640px) {
+    .fi-fo-2xl\:gap-6 {
+        gap: 1rem;
+    }
+    
+    .fi-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+}

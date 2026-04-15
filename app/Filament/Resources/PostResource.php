@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\PostResource\Pages;
 use App\Models\Post;
+use App\Models\Platform;
 use App\Services\PublicationService;
 use App\Services\AiGenerationService;
 use App\Jobs\PublishPostJob;
@@ -19,82 +20,157 @@ use Illuminate\Support\Facades\Auth;
 class PostResource extends Resource
 {
     protected static ?string $model = Post::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
-
     protected static ?string $navigationLabel = 'Посты';
-
     protected static ?string $pluralLabel = 'Посты';
 
-    public static function canViewAny(): bool
-    {
-        return true;
-    }
-    
-    public static function canCreate(): bool
-    {
-        return true;
-    }
-    
-    public static function canEdit($record): bool
-    {
-        return true;
-    }
-    
-    public static function canDelete($record): bool
-    {
-        return true;
-    }
+    public static function canViewAny(): bool { return true; }
+    public static function canCreate(): bool { return true; }
+    public static function canEdit($record): bool { return true; }
+    public static function canDelete($record): bool { return true; }
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Hidden::make('user_id')
-                    ->default(fn() => Auth::id()),
+                Forms\Components\Hidden::make('user_id')->default(fn() => Auth::id()),
                 
-                Forms\Components\TextInput::make('title')
-                    ->label('Заголовок')
-                    ->maxLength(255),
+                // Выбор площадки
+                Forms\Components\Select::make('platform_id')
+                    ->label('Площадка для публикации')
+                    ->options(Platform::where('is_active', true)->pluck('name', 'id'))
+                    ->required()
+                    ->live()
+                    ->reactive(),
                 
-                // Блок AI-генерации
+                // Чекбокс автоматического выбора темы
+                Forms\Components\Checkbox::make('auto_topic')
+                    ->label('🤖 Автоматический выбор темы')
+                    ->helperText('ИИ сам придумает тему поста')
+                    ->live()
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, $set, $get) {
+                        if ($state) {
+                            $set('topic', null);
+                            $set('content', null);
+                            $set('generated_content', null);
+                        }
+                    }),
+                
+                // Поле темы (активно только если чекбокс выключен)
+                Forms\Components\TextInput::make('topic')
+                    ->label('Тема поста')
+                    ->placeholder('Например: Как продвигать Telegram-канал')
+                    ->disabled(fn($get) => $get('auto_topic') == true)
+                    ->live(),
+                
+                // Кнопка генерации
+                Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('generate')
+                        ->label('🤖 Сгенерировать пост')
+                        ->icon('heroicon-o-sparkles')
+                        ->color('success')
+                        ->action(function ($livewire, $get, $set) {
+                            $service = app(AiGenerationService::class);
+                            $user = auth()->user();
+                            
+                            // Если автоматический выбор темы
+                            if ($get('auto_topic')) {
+                                // Генерируем случайную тему через AI
+                                $randomTopic = $service->generateRandomTopic($user);
+                                $set('topic', $randomTopic);
+                                
+                                // Генерируем пост на эту тему
+                                $generatedText = $service->generatePostFromTopic($randomTopic, $user);
+                            } else {
+                                $topic = $get('topic');
+                                if (empty($topic)) {
+                                    Notification::make()
+                                        ->title('Введите тему поста или включите автоматический выбор')
+                                        ->warning()
+                                        ->send();
+                                    return;
+                                }
+                                $generatedText = $service->generatePostFromTopic($topic, $user);
+                            }
+                            
+                            $set('generated_content', $generatedText);
+                            $set('content', $generatedText);
+                            
+                            Notification::make()
+                                ->title('✅ Пост сгенерирован!')
+                                ->body('Вы можете отредактировать текст перед публикацией.')
+                                ->success()
+                                ->send();
+                        }),
+                ]),
+                
+                // Поле текста поста
+                Forms\Components\RichEditor::make('content')
+                    ->label('Текст поста')
+                    ->required()
+                    ->columnSpanFull(),
+                
+                // Кнопки действий
                 Forms\Components\Group::make()
                     ->schema([
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                Forms\Components\TextInput::make('ai_topic')
-                                    ->label('Тема для генерации')
-                                    ->placeholder('Например: Как продвигать Telegram-канал')
-                                    ->live(),
-                                Forms\Components\Select::make('ai_style')
-                                    ->label('Стиль')
-                                    ->options([
-                                        'информационный' => 'Информационный',
-                                        'продающий' => 'Продающий',
-                                        'развлекательный' => 'Развлекательный',
-                                        'экспертный' => 'Экспертный',
-                                    ])
-                                    ->default('информационный'),
-                                Forms\Components\Select::make('ai_length')
-                                    ->label('Длина')
-                                    ->options([
-                                        'короткий' => 'Короткий',
-                                        'средний' => 'Средний',
-                                        'длинный' => 'Длинный',
-                                    ])
-                                    ->default('средний'),
-                            ]),
-                        
                         Forms\Components\Actions::make([
-                            Forms\Components\Actions\Action::make('generate')
-                                ->label('🤖 Сгенерировать текст')
-                                ->icon('heroicon-o-sparkles')
-                                ->color('success')
-                                ->action(function ($livewire, $get, $set) {
-                                    $topic = $get('ai_topic');
-                                    if (empty($topic)) {
+                            Forms\Components\Actions\Action::make('save_draft')
+                                ->label('💾 Черновик')
+                                ->icon('heroicon-o-document')
+                                ->color('gray')
+                                ->action(function ($livewire, $get, $set, $record) {
+                                    $platformId = $get('platform_id');
+                                    if (!$platformId) {
                                         Notification::make()
-                                            ->title('Введите тему поста')
+                                            ->title('Выберите площадку')
+                                            ->warning()
+                                            ->send();
+                                        return;
+                                    }
+                                    
+                                    $data = [
+                                        'content' => $get('content'),
+                                        'topic' => $get('topic'),
+                                        'status' => 'draft',
+                                        'user_id' => auth()->id(),
+                                    ];
+                                    
+                                    if ($record) {
+                                        $post = $record;
+                                        $post->update($data);
+                                        $post->platforms()->sync([$platformId]);
+                                    } else {
+                                        $post = Post::create($data);
+                                        $post->platforms()->attach($platformId);
+                                    }
+                                    
+                                    Notification::make()
+                                        ->title('✅ Пост сохранён в черновики!')
+                                        ->success()
+                                        ->send();
+                                    
+                                    redirect()->to('/admin/posts');
+                                }),
+                            
+                            Forms\Components\Actions\Action::make('publish_now')
+                                ->label('📤 Опубликовать')
+                                ->icon('heroicon-o-paper-airplane')
+                                ->color('success')
+                                ->action(function ($livewire, $get, $set, $record, PublicationService $publicationService) {
+                                    $platformId = $get('platform_id');
+                                    if (!$platformId) {
+                                        Notification::make()
+                                            ->title('Выберите площадку')
+                                            ->warning()
+                                            ->send();
+                                        return;
+                                    }
+                                    
+                                    $platform = Platform::find($platformId);
+                                    if (!$platform || !$platform->is_active) {
+                                        Notification::make()
+                                            ->title('Площадка не активна')
                                             ->warning()
                                             ->send();
                                         return;
@@ -103,60 +179,120 @@ class PostResource extends Resource
                                     $service = app(AiGenerationService::class);
                                     $user = auth()->user();
                                     
-                                    $generatedText = $service->generatePost([
-                                        'topic' => $topic,
-                                        'style' => $get('ai_style'),
-                                        'length' => $get('ai_length'),
-                                    ], $user);
+                                    // Если автоматический выбор темы и текст не сгенерирован
+                                    $content = $get('content');
+                                    $topic = $get('topic');
                                     
-                                    $set('ai_generated_text', $generatedText);
+                                    if (empty($content) || empty($topic)) {
+                                        if ($get('auto_topic')) {
+                                            // Генерируем тему и пост
+                                            $randomTopic = $service->generateRandomTopic($user);
+                                            $generatedText = $service->generatePostFromTopic($randomTopic, $user);
+                                            $content = $generatedText;
+                                            $topic = $randomTopic;
+                                        } else {
+                                            Notification::make()
+                                                ->title('Сначала сгенерируйте пост')
+                                                ->warning()
+                                                ->send();
+                                            return;
+                                        }
+                                    }
+                                    
+                                    $data = [
+                                        'content' => $content,
+                                        'topic' => $topic,
+                                        'status' => 'published',
+                                        'user_id' => auth()->id(),
+                                        'published_at' => now(),
+                                    ];
+                                    
+                                    if ($record) {
+                                        $post = $record;
+                                        $post->update($data);
+                                        $post->platforms()->sync([$platformId]);
+                                    } else {
+                                        $post = Post::create($data);
+                                        $post->platforms()->attach($platformId);
+                                    }
+                                    
+                                    $result = $publicationService->publishToPlatform($post, $platform);
+                                    
+                                    if ($result['success']) {
+                                        Notification::make()
+                                            ->title('✅ Пост опубликован!')
+                                            ->success()
+                                            ->send();
+                                    } else {
+                                        Notification::make()
+                                            ->title('❌ Ошибка публикации')
+                                            ->body($result['message'])
+                                            ->danger()
+                                            ->send();
+                                    }
+                                    
+                                    redirect()->to('/admin/posts');
+                                }),
+                            
+                            Forms\Components\Actions\Action::make('schedule_post')
+                                ->label('📅 Запланировать')
+                                ->icon('heroicon-o-calendar')
+                                ->color('info')
+                                ->form([
+                                    Forms\Components\DateTimePicker::make('scheduled_at')
+                                        ->label('Дата и время публикации')
+                                        ->required()
+                                        ->minDate(now()),
+                                ])
+                                ->action(function ($livewire, $get, $set, $record, array $data) {
+                                    $platformId = $get('platform_id');
+                                    if (!$platformId) {
+                                        Notification::make()
+                                            ->title('Выберите площадку')
+                                            ->warning()
+                                            ->send();
+                                        return;
+                                    }
+                                    
+                                    $scheduledAt = \Carbon\Carbon::parse($data['scheduled_at']);
+                                    
+                                    $postData = [
+                                        'content' => $get('content'),
+                                        'topic' => $get('topic'),
+                                        'status' => 'scheduled',
+                                        'user_id' => auth()->id(),
+                                        'scheduled_at' => $scheduledAt,
+                                    ];
+                                    
+                                    if ($record) {
+                                        $post = $record;
+                                        $post->update($postData);
+                                        $post->platforms()->sync([$platformId]);
+                                    } else {
+                                        $post = Post::create($postData);
+                                        $post->platforms()->attach($platformId);
+                                    }
+                                    
+                                    $delay = $scheduledAt->diffInSeconds(now());
+                                    if ($delay > 0) {
+                                        PublishPostJob::dispatch($post, [$platformId])->delay($delay);
+                                    } else {
+                                        PublishPostJob::dispatch($post, [$platformId]);
+                                    }
                                     
                                     Notification::make()
-                                        ->title('✅ Текст сгенерирован!')
-                                        ->body('Скопируйте текст и вставьте в редактор ниже.')
+                                        ->title('✅ Пост запланирован!')
+                                        ->body('Публикация состоится ' . $scheduledAt->format('d.m.Y H:i'))
                                         ->success()
                                         ->send();
+                                    
+                                    redirect()->to('/admin/posts');
                                 }),
                         ]),
-                        
-                        Forms\Components\Textarea::make('ai_generated_text')
-                            ->label('Сгенерированный текст')
-                            ->helperText('Нажмите Ctrl+C чтобы скопировать, затем вставьте в редактор выше')
-                            ->rows(6)
-                            ->columnSpanFull(),
                     ])
                     ->columnSpanFull(),
                 
-                Forms\Components\RichEditor::make('content')
-                    ->label('Текст поста')
-                    ->required()
-                    ->columnSpanFull(),
-                
-                Forms\Components\Select::make('status')
-                    ->label('Статус')
-                    ->options([
-                        'draft' => 'Черновик',
-                        'ready' => 'Готов к публикации',
-                        'published' => 'Опубликован',
-                        'scheduled' => 'Запланирован',
-                        'error' => 'Ошибка',
-                    ])
-                    ->default('draft'),
-                
-                Forms\Components\Select::make('platforms')
-                    ->label('Площадки для публикации')
-                    ->relationship('platforms', 'name')
-                    ->multiple()
-                    ->preload(),
-                
-                Forms\Components\DateTimePicker::make('scheduled_at')
-                    ->label('Запланированная публикация'),
-                
-                Forms\Components\FileUpload::make('media')
-                    ->label('Изображения')
-                    ->multiple()
-                    ->image()
-                    ->directory('posts'),
+                Forms\Components\Hidden::make('generated_content'),
             ]);
     }
 
@@ -164,8 +300,8 @@ class PostResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title')
-                    ->label('Заголовок')
+                Tables\Columns\TextColumn::make('content')
+                    ->label('Текст поста')
                     ->limit(50)
                     ->searchable(),
                 Tables\Columns\TextColumn::make('status')
@@ -179,6 +315,9 @@ class PostResource extends Resource
                         'error' => 'danger',
                         default => 'secondary',
                     }),
+                Tables\Columns\TextColumn::make('platforms.name')
+                    ->label('Площадка')
+                    ->badge(),
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Автор'),
                 Tables\Columns\TextColumn::make('scheduled_at')
@@ -200,11 +339,13 @@ class PostResource extends Resource
                         'scheduled' => 'Запланирован',
                         'error' => 'Ошибка',
                     ]),
+                Tables\Filters\SelectFilter::make('platforms')
+                    ->label('Площадка')
+                    ->relationship('platforms', 'name'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
-                
                 Action::make('publish')
                     ->label('Опубликовать')
                     ->icon('heroicon-o-paper-airplane')
@@ -216,7 +357,6 @@ class PostResource extends Resource
                         if ($platforms->isEmpty()) {
                             Notification::make()
                                 ->title('Нет выбранных площадок')
-                                ->body('Сначала выберите площадки для публикации в форме редактирования поста')
                                 ->warning()
                                 ->send();
                             return;
@@ -228,63 +368,18 @@ class PostResource extends Resource
                         $failCount = collect($results)->where('success', false)->count();
                         
                         if ($failCount > 0) {
-                            $errors = collect($results)
-                                ->filter(fn($r) => !$r['success'])
-                                ->map(fn($r, $platformId) => $platforms->find($platformId)?->name . ': ' . ($r['message'] ?? 'Неизвестная ошибка'))
-                                ->implode("\n");
-                            
                             Notification::make()
-                                ->title("Опубликовано частично")
-                                ->body("✅ Успешно: {$successCount}\n❌ Ошибок: {$failCount}\n\nОшибки:\n{$errors}")
+                                ->title("Опубликовано частично: ✅ {$successCount}, ❌ {$failCount}")
                                 ->warning()
-                                ->persistent()
                                 ->send();
                         } else {
                             Notification::make()
-                                ->title('✅ Пост успешно опубликован!')
+                                ->title('✅ Пост опубликован!')
                                 ->success()
                                 ->send();
                         }
                     })
                     ->visible(fn(Post $record) => $record->status !== 'published'),
-                
-                Action::make('schedule')
-                    ->label('Запланировать')
-                    ->icon('heroicon-o-calendar')
-                    ->color('info')
-                    ->form([
-                        Forms\Components\DateTimePicker::make('scheduled_at')
-                            ->label('Дата и время публикации')
-                            ->required()
-                            ->minDate(now()),
-                    ])
-                    ->action(function (Post $record, array $data) {
-                        $scheduledAt = \Carbon\Carbon::parse($data['scheduled_at']);
-                        
-                        $record->update([
-                            'scheduled_at' => $scheduledAt,
-                            'status' => 'scheduled',
-                        ]);
-                        
-                        $platformIds = $record->platforms()->pluck('platforms.id')->toArray();
-                        
-                        if (!empty($platformIds)) {
-                            $delay = $scheduledAt->diffInSeconds(now());
-                            
-                            if ($delay > 0) {
-                                PublishPostJob::dispatch($record, $platformIds)->delay($delay);
-                            } else {
-                                PublishPostJob::dispatch($record, $platformIds);
-                            }
-                        }
-                        
-                        Notification::make()
-                            ->title('✅ Пост запланирован!')
-                            ->body('Публикация состоится ' . $scheduledAt->format('d.m.Y H:i'))
-                            ->success()
-                            ->send();
-                    })
-                    ->visible(fn(Post $record) => $record->status !== 'published' && $record->status !== 'scheduled'),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),

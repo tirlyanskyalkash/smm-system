@@ -5,67 +5,48 @@ namespace App\Services\Vk;
 use App\Contracts\SocialPublisher;
 use App\Models\Post;
 use App\Models\Platform;
-use VK\Client\VKApiClient;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class VkPublisher implements SocialPublisher
 {
-    protected $vk;
-    
-    protected function getApiClient(Platform $platform)
-    {
-        $accessToken = decrypt($platform->access_token);
-        return new VKApiClient();
-    }
-    
     public function publish(Post $post, Platform $platform): array
     {
         try {
-            $accessToken = decrypt($platform->access_token);
-            $vk = $this->getApiClient($platform);
-            $groupId = str_replace('-', '', $platform->external_id);
+            $accessToken = $platform->access_token;
+            $groupId = $platform->external_id;
             
-            $message = $post->content;
-            $media = $post->media;
+            // Конвертируем HTML в текст
+            $message = $this->htmlToText($post->content);
             
-            // Подготовка вложений
-            $attachments = [];
-            
-            if (!empty($media)) {
-                foreach ($media as $index => $mediaPath) {
-                    $fullPath = storage_path('app/public/' . $mediaPath);
-                    
-                    if (file_exists($fullPath)) {
-                        // Загрузка фото на сервер VK
-                        $uploadServer = $vk->getUploadServer($accessToken, 'photos', [
-                            'group_id' => $groupId,
-                        ]);
-                        
-                        // Здесь нужна логика загрузки фото
-                        // Для упрощения пока пропустим, отправим без фото
-                    }
-                }
-            }
-            
-            // Публикация на стену
-            $response = $vk->wallPost($accessToken, [
+            // Параметры для VK API
+            $params = [
                 'owner_id' => '-' . $groupId,
-                'message' => $message,
                 'from_group' => 1,
-            ]);
+                'message' => $message,
+                'access_token' => $accessToken,
+                'v' => '5.131',
+            ];
+            
+            $response = Http::asForm()->post('https://api.vk.com/method/wall.post', $params);
+            $data = $response->json();
+            
+            if (isset($data['error'])) {
+                return [
+                    'success' => false,
+                    'external_id' => null,
+                    'message' => 'VK ошибка: ' . ($data['error']['error_msg'] ?? 'Неизвестная ошибка'),
+                ];
+            }
             
             return [
                 'success' => true,
-                'external_id' => $response['post_id'] ?? null,
+                'external_id' => $data['response']['post_id'] ?? null,
                 'message' => 'Успешно опубликовано в VK',
             ];
             
         } catch (\Exception $e) {
-            Log::error('VK publish error: ' . $e->getMessage(), [
-                'post_id' => $post->id,
-                'platform_id' => $platform->id,
-            ]);
-            
+            Log::error('VK publish error: ' . $e->getMessage());
             return [
                 'success' => false,
                 'external_id' => null,
@@ -74,20 +55,27 @@ class VkPublisher implements SocialPublisher
         }
     }
     
+    protected function htmlToText(string $html): string
+    {
+        $text = preg_replace('/<p[^>]*>/', '', $html);
+        $text = str_replace('</p>', "\n\n", $text);
+        $text = preg_replace('/<br[^>]*>/', "\n", $text);
+        $text = strip_tags($text);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace("/\n{3,}/", "\n\n", $text);
+        return trim($text);
+    }
+    
     public function validateCredentials(Platform $platform): bool
     {
         try {
-            $accessToken = decrypt($platform->access_token);
-            $vk = $this->getApiClient($platform);
-            
-            // Пробуем получить информацию о пользователе
-            $vk->usersGet($accessToken, [
-                'user_ids' => 'me',
+            $response = Http::get('https://api.vk.com/method/groups.getById', [
+                'access_token' => $platform->access_token,
+                'v' => '5.131',
             ]);
-            
-            return true;
+            $data = $response->json();
+            return !isset($data['error']);
         } catch (\Exception $e) {
-            Log::error('VK validation error: ' . $e->getMessage());
             return false;
         }
     }
@@ -95,22 +83,20 @@ class VkPublisher implements SocialPublisher
     public function getAccountInfo(Platform $platform): array
     {
         try {
-            $accessToken = decrypt($platform->access_token);
-            $vk = $this->getApiClient($platform);
-            
-            $user = $vk->usersGet($accessToken, [
-                'fields' => 'first_name,last_name,domain',
+            $response = Http::get('https://api.vk.com/method/groups.getById', [
+                'access_token' => $platform->access_token,
+                'v' => '5.131',
             ]);
+            $data = $response->json();
             
-            if (!empty($user)) {
+            if (!isset($data['error']) && isset($data['response'][0])) {
+                $group = $data['response'][0];
                 return [
-                    'name' => $user[0]['first_name'] . ' ' . $user[0]['last_name'],
-                    'id' => $user[0]['id'],
-                    'domain' => $user[0]['domain'] ?? '',
+                    'name' => $group['name'],
+                    'id' => $group['id'],
                 ];
             }
-            
-            return ['error' => 'User not found'];
+            return ['error' => 'Не удалось получить информацию'];
         } catch (\Exception $e) {
             return ['error' => $e->getMessage()];
         }

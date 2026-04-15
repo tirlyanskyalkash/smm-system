@@ -23,8 +23,6 @@ class CheckScheduledPosts extends Command
             if (!empty($platformIds)) {
                 PublishPostJob::dispatch($post, $platformIds);
                 $this->info("Пост #{$post->id} отправлен в очередь");
-                
-                // Обновляем статус, чтобы не отправить повторно
                 $post->update(['status' => 'processing']);
             }
         }

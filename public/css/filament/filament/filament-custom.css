@@ -1,0 +1,240 @@
+/* ========================================
+   SMM SYSTEM - КАСТОМНЫЙ ДИЗАЙН ДЛЯ FILAMENT
+   ======================================== */
+
+/* --- Общие стили --- */
+body {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e7f0 100%);
+}
+
+/* --- Карточки форм --- */
+.fi-fo-card {
+    border-radius: 1.25rem !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02) !important;
+    transition: all 0.3s ease !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.fi-fo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* --- Поля ввода --- */
+.fi-input,
+.fi-select-input,
+.fi-textarea-input {
+    border-radius: 0.875rem !important;
+    border-color: #e2e8f0 !important;
+    transition: all 0.2s ease !important;
+    background-color: #ffffff !important;
+}
+
+.fi-input:focus,
+.fi-select-input:focus,
+.fi-textarea-input:focus {
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15) !important;
+    transform: scale(1.01);
+}
+
+/* --- Кнопки --- */
+.fi-btn {
+    border-radius: 0.875rem !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 1.25rem !important;
+    transition: all 0.2s ease !important;
+}
+
+.fi-btn-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3) !important;
+}
+
+.fi-btn-primary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4) !important;
+}
+
+.fi-btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+}
+
+.fi-btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+}
+
+.fi-btn-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+}
+
+/* --- Кнопки действий в форме (Черновик, Опубликовать, Запланировать) --- */
+.fi-actions .fi-btn {
+    margin: 0.25rem;
+    padding: 0.5rem 1.5rem !important;
+}
+
+/* --- Чекбокс --- */
+.fi-checkbox-input {
+    border-radius: 0.5rem !important;
+    border-width: 2px !important;
+}
+
+.fi-checkbox-input:checked {
+    background-color: #8b5cf6 !important;
+    border-color: #8b5cf6 !important;
+}
+
+/* --- RichEditor (TinyMCE) --- */
+.tox-tinymce {
+    border-radius: 1rem !important;
+    border: 1px solid #e2e8f0 !important;
+    overflow: hidden !important;
+}
+
+.tox-editor-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+/* --- Карточки статистики (дашборд) --- */
+.fi-wi-stats-overview .fi-stat {
+    border-radius: 1.25rem !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    border: 1px solid rgba(139, 92, 246, 0.1) !important;
+    transition: all 0.3s ease !important;
+    padding: 1.25rem !important;
+}
+
+.fi-wi-stats-overview .fi-stat:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 20px 25px -12px rgba(0, 0, 0, 0.15) !important;
+    border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+.fi-wi-stats-overview .fi-stat-icon {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    border-radius: 1rem !important;
+    padding: 0.75rem !important;
+}
+
+/* --- Таблицы --- */
+.fi-ta {
+    border-radius: 1rem !important;
+    overflow: hidden !important;
+}
+
+.fi-ta-header {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+}
+
+.fi-ta-row {
+    transition: all 0.2s ease !important;
+}
+
+.fi-ta-row:hover {
+    background-color: rgba(139, 92, 246, 0.03) !important;
+}
+
+/* --- Badge статусов --- */
+.fi-badge {
+    border-radius: 9999px !important;
+    padding: 0.25rem 0.875rem !important;
+    font-weight: 600 !important;
+    font-size: 0.75rem !important;
+}
+
+/* --- Уведомления --- */
+.fi-notification {
+    border-radius: 1rem !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+.fi-notification-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+}
+
+.fi-notification-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+}
+
+.fi-notification-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+}
+
+.fi-notification-info {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+}
+
+/* --- Сайдбар навигация --- */
+.fi-sidebar-nav {
+    background: linear-gradient(180deg, #1e1b4b 0%, #2e1a4b 100%) !important;
+}
+
+.fi-sidebar-nav-item {
+    border-radius: 0.75rem !important;
+    margin: 0.25rem 0.75rem !important;
+    transition: all 0.2s ease !important;
+}
+
+.fi-sidebar-nav-item:hover {
+    background: rgba(139, 92, 246, 0.2) !important;
+}
+
+.fi-sidebar-nav-item-active {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+}
+
+/* --- Хедер --- */
+.fi-topbar {
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.1) !important;
+}
+
+/* --- Анимация загрузки --- */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.fi-loading {
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* --- Адаптив для мобильных устройств --- */
+@media (max-width: 640px) {
+    .fi-fo-2xl\:gap-6 {
+        gap: 1rem !important;
+    }
+    
+    .fi-btn {
+        padding: 0.5rem 1rem !important;
+        font-size: 0.875rem !important;
+    }
+    
+    .fi-wi-stats-overview .fi-stat {
+        padding: 0.75rem !important;
+    }
+}
+
+/* --- Кастомный скроллбар --- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+}
