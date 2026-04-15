@@ -1,0 +1,1 @@
+document.addEventListener("livewire:init",()=>{Livewire.on("insert-text",({text:t})=>{setTimeout(()=>{const e=document.querySelector(".tox-edit-area iframe");if(e&&e.contentWindow){const n=e.contentWindow.document.body;n.innerHTML="<p>"+t.replace(/\n/g,"</p><p>")+"</p>"}},100)})});
